@@ -269,6 +269,7 @@ def update_4pred_4sample(gt_label, curr_tree_depth, b_tree, pred_label, depth_st
                     tmp_key1 = torch.minimum(tmp_key1, next_interval_num)
 
                     depthmap_list.append(next_interval * (tmp_key0 + tmp_key1) / 2.0 + depth_start)
+                curr_depth = torch.stack(depthmap_list, 1)
                 # print(curr_depth.shape)
 
     else:
