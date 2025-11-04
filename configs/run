@@ -1,0 +1,2 @@
+python test_gbinet.py --cfg configs/test_custom.yaml
+python test_gbinet.py --cfg configs/test_blended.yaml

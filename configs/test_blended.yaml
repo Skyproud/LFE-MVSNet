@@ -1,0 +1,111 @@
+output_dir: "exps/test_blended_stage7_128"
+true_gpu: "1"
+gpu: [0]
+random_seed: 0
+auto_resume: True
+master_port: "11326"
+model_file: "gbinet_clean"
+model_name: "GBiNet"
+test_func_name: "test_model_stage_profile"
+dataset: "general_eval"
+max_depth: 8
+model_path: "checkpoints/model_019.ckpt"
+img_mean: [0.5, 0.5, 0.5]
+img_std: [0.5, 0.5, 0.5]
+
+model:
+  is_stage: True
+  stage_num: 4
+  output_channels: [64, 32, 16, 8]
+  group_nums: [8, 8, 8, 4]
+  feat_name: "SC_StageNet1"
+  use_3dbn: True
+  stage_info:
+    scale:
+      "0": 0.125
+      "1": 0.25
+      "2": 0.5
+      "3": 1.0
+    depth2stage:
+      "1": 0
+      "2": 0
+      "3": 1
+      "4": 1
+      "5": 2
+      "6": 2
+      "7": 3
+      "8": 3
+      "9": 3 # needed and invalid, just for checking
+
+test:
+  batch_size: 1
+  log_period: 10
+  test_metric: "thres2mm_accu"
+
+data:
+  num_workers: 4
+  test:
+    root_dir: "/home/d6813/LZHL/Blend"
+    num_view: 7
+    interval_scale: 0.8
+    num_depth: 128
+    listfile:  "lists/BlendedMVS/val.txt"
+    out_scale: 1.0
+    self_norm: False
+    color_mode: null
+    with_gt: False
+    max_h: null
+    max_w: null
+    base_image_size: 64
+    is_clean: True
+    out_depths: [8]
+    prob_out_depths: [1, 2, 3, 4, 5, 6, 8]
+    save_depths: [8]
+    prob_depth: 7
+
+no_testing: True
+# no_fusion: True
+
+fusion:
+  name: "xy_filter_per"
+  xy_filter_per:
+    nprocs: 1
+    global_pair: False
+    para_num: 1
+    para_tag: [0]
+    output_dir: "exps/test_blended_stage7_128"
+    scan107:
+      prob_threshold: [0.8]
+      num_consistent: [4]
+      img_dist_thresh: [0.5]
+      depth_thresh: [0.0008]
+    scan108:
+      prob_threshold: [0.8]
+      num_consistent: [3]
+      img_dist_thresh: [0.5]
+      depth_thresh: [0.0008]
+    scan109:
+      prob_threshold: [0.8]
+      num_consistent: [3]
+      img_dist_thresh: [0.5]
+      depth_thresh: [0.005]
+    scan110:
+      prob_threshold: [0.8]
+      num_consistent: [3]
+      img_dist_thresh: [0.5]
+      depth_thresh: [0.005]
+    scan111:
+      prob_threshold: [0.8]
+      num_consistent: [4]
+      img_dist_thresh: [0.5]
+      depth_thresh: [0.005]
+    scan112:
+      prob_threshold: [0.7]
+      num_consistent: [3]
+      img_dist_thresh: [0.5]
+      depth_thresh: [0.0065]
+    scan113:
+      prob_threshold: [0.75]
+      num_consistent: [3]
+      img_dist_thresh: [0.6]
+      depth_thresh: [0.0075]
