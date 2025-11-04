@@ -11,4 +11,6 @@ plyfile
 pytorch_wavelets
 pyqt
 pywt
+timm
+thop
 mmcv==2.2.0
