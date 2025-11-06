@@ -3,6 +3,104 @@ from utils import binary_tree
 import torch.nn.functional as F
 
 
+def get_four_label_l4_s4_bin(curr_tree_depth, gt_depth_img, b_tree, depth_start, depth_end, is_first):
+    with torch.no_grad():
+        if depth_start.dim() == 1 or depth_end.dim() == 1:
+            depth_start = torch.unsqueeze(torch.unsqueeze(depth_start, 1), 1) #[1,1,1]
+            # print(depth_start.shape)
+            depth_end = torch.unsqueeze(torch.unsqueeze(depth_end, 1), 1)
+        bin_edge_list = []
+        if is_first:
+            bin_edge_list.append(torch.zeros_like(gt_depth_img) + depth_start)
+            depth_range = depth_end - depth_start
+            interval = depth_range / 16.0
+            for i in range(16):
+                bin_edge_list.append(bin_edge_list[0] + interval * (i + 1))
+            gt_label = torch.zeros(gt_depth_img.size(), dtype=torch.int64, device=gt_depth_img.device) - 1
+            for i in range(16):
+                bin_mask = torch.ge(gt_depth_img, bin_edge_list[i])  # 返回布尔类型的张量
+                bin_mask = torch.logical_and(bin_mask,
+                                             torch.lt(gt_depth_img, bin_edge_list[i + 1]))  # 返回布尔类型的张量
+                gt_label[bin_mask] = i
+            bin_mask = (gt_label != -1)
+            return gt_label, bin_mask
+        if curr_tree_depth == 2:
+            depth_range = depth_end - depth_start
+            curr_interval_num = (2.0 ** (b_tree[:, 0, :, :] + 3))
+            curr_interval = depth_range / curr_interval_num # 深度片段的宽度
+            bin_edge_list = []
+
+            for i in range(17):
+                tmp_key = torch.clamp_min(b_tree[:, 1, :, :] * 2.0 + i - 7, 0)
+                tmp_key = torch.minimum(tmp_key, curr_interval_num + 1)
+                bin_edge_list.append(curr_interval * tmp_key + depth_start)
+
+            gt_label = torch.zeros(gt_depth_img.size(), dtype=torch.int64, device=gt_depth_img.device) - 1
+            for i in range(16):
+                bin_mask = torch.ge(gt_depth_img, bin_edge_list[i]) # 返回布尔类型的张量
+                bin_mask = torch.logical_and(bin_mask,
+                    torch.lt(gt_depth_img, bin_edge_list[i + 1])) # 返回布尔类型的张量
+                gt_label[bin_mask] = i
+            bin_mask = (gt_label != -1)
+        elif curr_tree_depth in {3, 4}:
+            depth_range = depth_end - depth_start
+            curr_interval_num = (2.0 ** (b_tree[:, 0, :, :] + 3))
+            next_interval = depth_range / curr_interval_num # 深度片段的宽度
+            bin_edge_list = []
+
+            for i in range(9):
+                tmp_key = torch.clamp_min(b_tree[:, 1, :, :] * 2.0 + i - 3, 0)
+                tmp_key = torch.minimum(tmp_key, curr_interval_num + 1)
+                bin_edge_list.append(next_interval * tmp_key + depth_start)
+
+            gt_label = torch.zeros(gt_depth_img.size(), dtype=torch.int64, device=gt_depth_img.device) - 1
+            for i in range(8):
+                bin_mask = torch.ge(gt_depth_img, bin_edge_list[i]) # 返回布尔类型的张量
+                bin_mask = torch.logical_and(bin_mask,
+                    torch.lt(gt_depth_img, bin_edge_list[i + 1])) # 返回布尔类型的张量
+                gt_label[bin_mask] = i
+            bin_mask = (gt_label != -1)
+        elif curr_tree_depth in {5, 6}:
+            depth_range = depth_end - depth_start
+            curr_interval_num = (2.0 ** (b_tree[:, 0, :, :] + 3))
+            next_interval = depth_range / curr_interval_num # 深度片段的宽度
+            bin_edge_list = []
+
+            for i in range(7):
+                tmp_key = torch.clamp_min(b_tree[:, 1, :, :] * 2.0 + i - 2, 0)
+                tmp_key = torch.minimum(tmp_key, curr_interval_num + 1)
+                bin_edge_list.append(next_interval * tmp_key + depth_start)
+
+            gt_label = torch.zeros(gt_depth_img.size(), dtype=torch.int64, device=gt_depth_img.device) - 1
+            for i in range(6):
+                bin_mask = torch.ge(gt_depth_img, bin_edge_list[i]) # 返回布尔类型的张量
+                bin_mask = torch.logical_and(bin_mask,
+                    torch.lt(gt_depth_img, bin_edge_list[i + 1])) # 返回布尔类型的张量
+                gt_label[bin_mask] = i
+            bin_mask = (gt_label != -1)
+        else:
+            depth_range = depth_end - depth_start
+            next_interval_num = (2.0 ** (b_tree[:, 0, :, :] + 3))
+            next_interval = depth_range / next_interval_num # 深度片段的宽度
+            bin_edge_list = []
+
+            for i in range(5):
+                tmp_key = torch.clamp_min(b_tree[:, 1, :, :] * 2.0 + i - 1, 0)
+                tmp_key = torch.minimum(tmp_key, next_interval_num + 1)
+                bin_edge_list.append(next_interval * tmp_key + depth_start)
+
+            gt_label = torch.zeros(gt_depth_img.size(), dtype=torch.int64, device=gt_depth_img.device) - 1
+            for i in range(4):
+                bin_mask = torch.ge(gt_depth_img, bin_edge_list[i]) # 返回布尔类型的张量
+                bin_mask = torch.logical_and(bin_mask,
+                    torch.lt(gt_depth_img, bin_edge_list[i + 1])) # 返回布尔类型的张量
+                gt_label[bin_mask] = i
+            bin_mask = (gt_label != -1)
+        return gt_label, bin_mask
+
+
+
+
 
 def update_4pred_4sample(curr_tree_depth, b_tree, pred_label, depth_start, depth_end, is_first, with_grad=False, no_detach=False):
     if not with_grad:
@@ -183,9 +281,9 @@ def depthmap2tree(depth_img, tree_depth, depth_start, depth_end, scale_factor=1.
 
             depth_range = depth_end - depth_start
 
-            d_interval = depth_range / (2.0 ** (tree_depth + 2))
+            d_interval = depth_range / (2.0 ** (tree_depth + 2))  # 每个片段宽度
             b_tree[:, 1, :, :] = (torch.floor((depth_img - depth_start) / d_interval)).type(
-                torch.int64)
+                torch.int64)  # 当前阶段深度值所在的片段位置（位于第几个片段）
             b_tree[:, 1, :, :] = torch.clamp(b_tree[:, 1, :, :], min=0, max=2.0 ** (tree_depth + 2))
 
             next_interval_num = torch.tensor(2.0 ** (tree_depth + 3.0), device=depth_img.device)
