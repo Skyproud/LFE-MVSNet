@@ -30,6 +30,7 @@ from utils.logger import setup_logger
 from utils.config import load_config
 from utils.functions import *
 import utils.depth_update as depth_update
+import utils.depth_update_clean as depth_update_clean
 
 
 
@@ -85,9 +86,7 @@ def train_model_stage(model,
 
             preds = outputs["pred_feature"]
             # print(preds.shape)
-            loss_fn = AWA_loss(gamma=2)
-            loss = loss_fn(preds, modified_label, mask, curr_epoch)
-            # loss = loss_fn(preds, modified_label, mask)
+            loss = loss_fn(preds, modified_label, mask)
             loss.backward()
             optimizer.step()
 
@@ -422,7 +421,7 @@ def validate_model_stage(model,
                 mask = sample_cuda["masks"][str(stage_id)]
 
                 depth_min_max = sample_cuda["depth_min_max"]
-                modified_label, gt_label, bin_mask = depth_update.sliding_error_tolerant_fragment(curr_tree_depth, depth_gt, b_tree=sample_cuda["binary_tree"]["tree"],
+                gt_label, bin_mask = depth_update_clean.get_four_label_l4_s4_bin(curr_tree_depth, depth_gt, b_tree=sample_cuda["binary_tree"]["tree"],
                     depth_start=depth_min_max[:, 0], depth_end=depth_min_max[:, 1], is_first=is_first)
                 # gt_label = torch.squeeze(gt_label, 1)
                 with torch.no_grad():
@@ -432,15 +431,14 @@ def validate_model_stage(model,
                     mask = torch.logical_and(bin_mask_prefix, mask > 0.0).float()
                 
                 preds = outputs["pred_feature"]
-                # loss = loss_fn(preds, modified_label, mask)
-                loss_fn = AWA_loss(gamma=2)
-                loss = loss_fn(preds, modified_label, mask, curr_epoch)
+                loss = loss_fn(preds, gt_label, mask)
+
 
                 pred_label = outputs["pred_label"]
             
                 depth_min_max = sample_cuda["depth_min_max"]
                 sample_cuda["binary_tree"]["depth"], sample_cuda["binary_tree"]["tree"] = \
-                    depth_update.update_4pred_4sample(gt_label, curr_tree_depth, sample_cuda["binary_tree"]["tree"],
+                    depth_update_clean.update_4pred_4sample(curr_tree_depth, sample_cuda["binary_tree"]["tree"],
                     torch.unsqueeze(pred_label, 1), depth_start=depth_min_max[:, 0], depth_end=depth_min_max[:, 1], is_first=is_first)
                 
                 depth_est = (sample_cuda["binary_tree"]["depth"][:, 1] + sample_cuda["binary_tree"]["depth"][:, 2]) / 2.0
@@ -451,7 +449,7 @@ def validate_model_stage(model,
                 if next_depth_stage != stage_id:
                     depth_min_max = sample_cuda["depth_min_max"]
                     sample_cuda["binary_tree"]["depth"], sample_cuda["binary_tree"]["tree"] = \
-                        depth_update.depthmap2tree(depth_est, curr_tree_depth + 1, depth_start=depth_min_max[:, 0],
+                        depth_update_clean.depthmap2tree(depth_est, curr_tree_depth + 1, depth_start=depth_min_max[:, 0],
                             depth_end=depth_min_max[:, 1], scale_factor=2.0, mode='bilinear')
                 
                 prob_map = outputs["pred_prob"]
