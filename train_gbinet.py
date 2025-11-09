@@ -25,7 +25,6 @@ from datasets import find_dataset_def
 from models import find_model_def, find_loss_def
 from utils.lr_scheduler import build_scheduler
 from utils.optimizer import build_optimizer
-from models.gbinet import AWA_loss
 from utils.logger import setup_logger
 from utils.config import load_config
 from utils.functions import *
