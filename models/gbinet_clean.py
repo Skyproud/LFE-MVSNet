@@ -1,14 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import cv2
-import numpy as np
-import os
-import modules.modules
+import math
+import modules.gbinet_submodules_clean
 from modules.gbinet_submodules_clean import StageFeatExtNet, CostRegNet, CostRegNetBN, PixelwiseNet,FeatureFetcher, get_pixel_grids
 import utils.depth_update_clean as depth_update_clean
-import matplotlib.pyplot as plt
-from PIL import Image
+
+
 
 
 class GBiNet(nn.Module):
@@ -20,7 +18,7 @@ class GBiNet(nn.Module):
         self.output_channels = cfg["model"]["output_channels"]
         self.depth2stage = cfg["model"]["stage_info"]["depth2stage"]
         self.group_nums = cfg["model"]["group_nums"]
-        self.feat_name = cfg["model"].get("feat_name", "StageFeatExtNet")
+        self.feat_name = cfg["model"].get("feat_name", "SC_StageNet")
         self.feat_class = getattr(modules.gbinet_submodules_clean, self.feat_name)
         self.img_feature = self.feat_class(base_channels=8, stage_num=self.stage_num, output_channels=self.output_channels)
         self.feature_fetcher = FeatureFetcher()
