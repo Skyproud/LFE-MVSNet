@@ -256,41 +256,6 @@ def GBiNet_loss(preds, modified_label, mask):
     return loss
 
 
-class AWA_loss(nn.Module):
-    def __init__(self, gamma=2, reduction='none'):
-        super(AWA_loss, self).__init__()
-        self.gamma = gamma
-        self.ce_loss = nn.CrossEntropyLoss(reduction=reduction)
 
-    def decay_function(self, curr_epoch):
-        pai = math.pi
-
-        decay_rate = 0.5 * (1 + math.cos(pai * curr_epoch)/17)
-        return decay_rate
-    def rise_function(self, curr_epoch):
-        pai = math.pi
-        rise_rate = 1 - (0.5 * (1 + math.cos(pai * curr_epoch)/17))
-        return rise_rate
-
-    def forward(self, preds, gt_label, mask, curr_epoch):
-        """
-        inputs: [b, c, h, w]
-        targets: [b, h, w]
-        """
-        # inputs未经过sotfmax处理
-        mask = mask > 0.0  # B, H, W
-        # valid_pixel_num = torch.sum(mask, dim=[1, 2]) + 1e-12
-        preds = preds.permute(0, 2, 3, 1)  # B, H, W, D
-        preds_mask = preds[mask]  # N, C
-        gt_label_mask = gt_label[mask]  # N
-
-        ce_loss = self.ce_loss(preds_mask, gt_label_mask) # [b, h, w]
-        ht = self.decay_function(curr_epoch)
-        ut = self.rise_function(curr_epoch)
-        pt = torch.exp(-ce_loss) # [b, h, w]
-        F_loss = (ht * (1 - (1-pt)**self.gamma) + ut * (1-pt)**self.gamma) * ce_loss
-
-        Z = ce_loss.mean().item()/F_loss.mean().item()
-        return Z*F_loss.mean()
 
 
